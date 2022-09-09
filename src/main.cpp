@@ -1,11 +1,12 @@
 // main.cpp für die Kata
 // CSV Tabellieren von https://ccd-school.de
-//
+// './csv-kata -csv csv/test-1.csv'
+// 
 // ToDos:
 // * Über Parameter das Vertzeichniss angeben, wo die CSV liegen ✔
 // * Einlesen der CSV ✔
-// * Ausgabe der CSV in Tabellenform auf der Konsole
-// * Refactoring - Funktionen anlegen und Aufräumen
+// * Ausgabe der CSV in Tabellenform auf der Konsole ✔
+// * Refactoring - Funktionen anlegen und Aufräumen ✔
 
 #include <iostream>
 #include <iomanip>
@@ -14,23 +15,73 @@
 #include <string.h>
 #include <unistd.h>
 #include <fstream>
+#include <vector>
 
-void printCenter(int width, std::string text) {
+
+// Gibt den 'text' in der mitte der Konsole aus.
+void printTextCentered(int width, std::string text) {
     int halfScreen = width / 2;
     std::cout.width(halfScreen - (text.length() / 2));
     std::cout << std::right << text << std::endl;
-
 }
 
+// Klassische 'trim'funktion
+std::string trim(std::string& str, const char trimSign)
+{
+    str.erase(str.find_last_not_of(trimSign)+1);         //suffixing spaces
+    str.erase(0, str.find_first_not_of(trimSign));       //prefixing spaces
+    return str;
+}
+
+// "Zeichnet" eine Linie anhand 'fillChar' über die ganze Breite der Konsole.
 void printLine(const char fillChar, int width) {
-    std::cout << std::setfill(fillChar) << std::cout.width(width) << std::endl;
+    std::cout << std::setfill(fillChar) << std::cout.width(width) << std::endl << std::endl;
+}
+
+// Wandelt die CSV_zeile in ein vector um, und gibt die Einträge des Vectors inkl. Linie wieder auf der Console aus.
+void printFieldValues(std::string csvLine) {
+    std::string fieldDelimiter = ";";
+    std::vector<std::string> stringVector;
+    size_t pos = 0;
+
+    while((pos = csvLine.find(fieldDelimiter)) != std::string::npos) {
+        std::string currField = csvLine.substr(0, pos);
+        currField = trim(currField, '"');
+        stringVector.push_back(currField);
+        csvLine.erase(0, pos + fieldDelimiter.length());
+    }
+
+    // Ausgabe Text
+    for(unsigned int currField = 0; currField < stringVector.size(); ++currField) {
+        unsigned int fieldWidth = 15;
+        if (currField == 0 || currField == 2 || currField > 4) continue;
+        
+        std::cout << std::left << std::setfill(' ') << std::setw(fieldWidth) << stringVector.at(currField) << "|";
+    }
+    std::cout << std::endl;
+
+    // Ausgabe Linie
+    for(unsigned int currField = 0; currField < stringVector.size(); ++currField) {
+        unsigned int fieldWidth = 16;
+        if (currField == 0 || currField == 2 || currField > 4) continue;
+        
+        std::cout << std::right << std::setfill('-') << std::setw(fieldWidth) << "+";
+    }
+    std::cout << std::endl;
+}
+
+// Gibt eine 'Überschrift' in der Konsole aus.
+void printMainHeadline(std::string headline, const unsigned int width) {
+    printTextCentered(width, headline);
+
+    const char fillChar = '-'; 
+    printLine(fillChar, width);
 }
 
 // IEnumerable<string> Tabellieren(IEnumerable<string> CSV_zeilen)
 // Das ist die Codezeile aus der Kata.
-std::string Tabellieren(std::string CSV_zeilen) {
-    const std::string returnText = "Muss noch Implementiert werden!";
-    return returnText;
+void Tabellieren(const std::string CSV_zeilen, const unsigned int lineCounter) {
+    printFieldValues(CSV_zeilen);
 }
 
 // argc - Argument Count - Anzahl der übergebenen Argumente
@@ -47,21 +98,19 @@ int main(int argc, char* argv[]) {
     struct winsize currentWinsize;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &currentWinsize);
 
-    int width = currentWinsize.ws_col;
-    int height = currentWinsize.ws_row;
+    const unsigned int width = currentWinsize.ws_col;
+    const unsigned int height = currentWinsize.ws_row;
 
-    //std::cout << "Lines:" << currentWinsize.ws_row << ", Columns: " << currentWinsize.ws_col << std::endl;
-    std::string headline = "CSV Tabellieren";
-    printCenter(width, headline);
-
-    const char fillChar = '-'; 
-    printLine(fillChar, width);
+    const std::string headline = "CSV Tabellieren";
+    printMainHeadline(headline, width);
 
     if (!csvFilePath.empty()) {
         fileHandler.open(csvFilePath);
         if (fileHandler.is_open()) {
+            unsigned int lineCounter = 0;
             while(getline(fileHandler, csvLine)) {
-                std::cout << Tabellieren(csvLine) << std::endl;
+                ++lineCounter;
+                Tabellieren(csvLine, lineCounter);
             }
             fileHandler.close();
         } else {
